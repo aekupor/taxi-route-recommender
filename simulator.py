@@ -25,7 +25,7 @@ def create_blank_graph():
     G.add_edge(bayview, mission, weight=1)
     G.add_edge(mission, fishermans_wharf, weight=4)
 
-    return G
+    return G, nodes_list
 
 
 def simulate_data():
@@ -46,7 +46,7 @@ def simulate_data():
             for we in weekend:
                 for h in holiday:
                     for n in node:
-                        product += t * w * we * h * n
+                        product += time[t] * weather[w] * weekend[we] * holiday[h] * node[n]
 
     # simulate data
     for day in range(days):
@@ -72,10 +72,28 @@ def simulate_data():
 
     return df
 
+def get_transition_probs(nodes_list):
+    actions = ['north', 'south', 'east', 'west', 'stay']
+
+    transitions = dict()
+    for start in nodes_list:
+        inner_dict = dict()
+        probs = []
+        for dest in nodes_list:
+            prob = random.uniform(0, 1)
+            probs.append(prob)
+
+        normalization = np.sum(probs)
+        for i in range(len(nodes_list)):
+            inner_dict[nodes_list[i]] = probs[i] / normalization
+        transitions[start] = inner_dict
+    print(transitions)
+    return transitions
 
 def main():
-    G = create_blank_graph()
+    G, nodes_list = create_blank_graph()
     df = simulate_data()
+    T = get_transition_probs(nodes_list)
 
 if __name__ == '__main__':
     main()
