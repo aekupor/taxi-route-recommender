@@ -1,106 +1,158 @@
-using QuickPOMDPs: QuickPOMDP
-using POMDPTools: Deterministic, Uniform, SparseCat
+using CSV
+using DataFrames
+using StatsBase
 
 
-struct taxiMDP
-    Y # discount factor
-    S # state space
-    A # action space
-    T # transition function
-    R # reward function
-    #TR # sample transition and reward
+include("taxi_world_test") 
+
+
+function read_in_file(inputfilename)
+    df = CSV.read(inputfilename, DataFrame)
+    return df
 end
 
-function lookahead(mdp::taxiMDP, U, s, a)
-    S, T, R, Y = mdp.S, mdp.T, mdp.R, mdp.Y
-    return R(s,a) + Y*sum(T(s,a,s_new)*U(s_new) for s_new in S)
+function covert_state_to_number(s::taxi_world_state) 
+    # special cases to handle not going over 100 states (since 1010 > 100)
+    if s.x == 10 && s.y == 10 
+        return 1
+    elseif s.x == 10
+        return s.y
+    elseif s.y == 10
+       return s.x
+    end
+    number = string(s.x) * string(s.y) # todo: add in time, temp, request later 
+    return parse(Int64, number)
 end
 
-reward = function (s, a)  #TODO: update
-    if a == "north"
-        return -1.0
-    elseif s == "south"
-        return -100.0
-    else 
-        return 10.0
+function convert_number_to_action(a::Int64) 
+    # return the symbol of a from the number
+    if a==1
+        return :up
+    elseif a==2
+        return :down
+    elseif a==3
+        return :left
+    elseif a==4
+        return :right
+    elseif a==5
+        return :stay
     end
 end
 
-utility = function(s)  # TODO: update
-    return 1
-end
-
-trans = function (s, a, s_new)  #this data is from running the simulator and printing get_transition_probs
-    if s == "golden_gate_park"
-        if s_new == "golden_gate_park"
-            return 0.2813690465079768
-        elseif s_new == "sunset"
-            return 0.06397271130176105
-        elseif s_new == "bayview"
-            return 0.2834367895672558
-        elseif s_new == "mission"
-            return 0.3081994002176982
-        elseif s_new == "fishermans_wharf"
-            return 0.06302205240530818
-        end
-    elseif s == "sunset"
-        if s_new == "golden_gate_park"
-            return 0.17056643739636274
-        elseif s_new == "sunset"
-            return 0.2492636296055344
-        elseif s_new == "bayview"
-            return 0.13981410701151556
-        elseif s_new == "mission"
-            return 0.2555662039617832
-        elseif s_new == "fishermans_wharf"
-            return 0.18478962202480415
-        end
-    elseif s == "bayview"
-        if s_new == "golden_gate_park"
-            return 0.22039135897652012
-        elseif s_new == "sunset"
-            return 0.024652871735974927
-        elseif s_new == "bayview"
-            return 0.35630318683137047
-        elseif s_new == "mission"
-            return 0.3423632027601907
-        elseif s_new == "fishermans_wharf"
-            return 0.056289379695943775
-        end
-    elseif s == "mission"
-        if s_new == "golden_gate_park"
-            return 0.08582860046524174
-        elseif s_new == "sunset"
-            return 0.38370020309117253
-        elseif s_new == "bayview"
-            return 0.07821975838298886
-        elseif s_new == "mission"
-            return 0.1431001320578924
-        elseif s_new == "fishermans_wharf"
-            return 0.3091513060027044
-        else
-            return 0
-        end
-    elseif s == "fishermans_wharf"
-        if s_new == "golden_gate_park"
-            return 0.39041617681739876
-        elseif s_new == "sunset"
-            return 0.29611552123293966
-        elseif s_new == "bayview"
-            return 0.059639571425333014
-        elseif s_new == "mission"
-            return 0.10397806641026408
-        elseif s_new == "fishermans_wharf"
-            return 0.1498506641140645
-        else
-            return 0
+function solve_QLearning(df)
+    # number of states = 10x * 10y (add in temp, time, request later)
+    number_states = 100
+    number_actions = 5
+    
+    model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
+    for k in 1:100
+        for dfr in eachrow(df)
+            s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
+            sp = taxi_world_state(dfr.sp_x, dfr.sp_y, dfr.sp_temp, dfr.sp_time, dfr.sp_received_request)
+            model = update!(model, covert_state_to_number(s), dfr.a, dfr.r, covert_state_to_number(sp))
         end
     end
-    return 0
+
+    actions = Vector{Int}()
+    for s in model.S
+        best_value = model.Q[s, 1]
+        best_action = 1
+        for a in model.A
+            if model.Q[s,a] > best_value
+                best_value = model.Q[s,a]
+                best_action = a
+            end
+        end
+        push!(actions, best_action)
+    end
+    return actions
+end
+
+mutable struct QLearning
+    S # state space (assumes 1:nstates)
+    A # action space (assumes 1:nactions)
+    Y # discount
+    Q # action value function
+    alpha # learning rate
+end
+
+function lookahead(model::QLearning, s, a)
+    return model.Q[s,a]
+end
+
+function update!(model::QLearning, s, a, r, sp)
+    Y, Q, alpha = model.Y, model.Q, model.alpha
+    Q[s,a] += alpha*(r + Y*maximum(Q[sp,:]) - Q[s,a])
+    return model
 end
 
 
-myTaxiMDP = taxiMDP(0.95, ["golden_gate_park", "sunset", "bayview", "mission", "fishermans_wharf"], ["north", "south", "east", "west", "stay"], trans, reward)
+# TODO!!!
+function evaluate_policy(df, policy, mdp)
+    total_u = 0
+    current_row = 0
+    for dfr in eachrow(df)
+        s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
+        s_num = covert_state_to_number(s)
+        a = convert_number_to_action(policy[s_num])
+        transitions = POMDPs.transition(mdp, s, a)
 
-result = lookahead(myTaxiMDP, utility, "mission", "north")
-print(result)
+        neighbors = Vector{taxi_world_state}()
+        weights = Vector()
+        for item in transitions
+            push!(neighbors, item[1])
+            push!(weights, item[2])
+        end
+
+        # a bit janky, but it works
+        num = rand()
+        prob_total = 0
+        index = 0
+        for weight in weights
+            if num > prob_total
+                index += 1
+            end
+            prob_total += weight
+        end
+
+        sp = neighbors[index] 
+        total_u += (discount_rate ^ current_row) * POMDPs.reward(mdp, s, a, sp) 
+        current_row += 1
+        if sp.received_request == true 
+            current_row = 0
+        end
+    end
+    return total_u
+end
+
+function generate_random_policy()
+    actions = []
+    for i in 1:100
+        num = rand()
+        if num < .2
+            push!(actions, 1)
+        elseif num < .4
+            push!(actions, 2)
+        elseif num < .6
+            push!(actions, 3)
+        elseif num < .8
+            push!(actions, 4)
+        else
+            push!(actions, 5)
+        end
+    end
+    return actions
+end
+
+discount_rate = 0.95
+mdp = taxi_world()
+
+df = read_in_file("dataset.txt")
+qlearning_policy = solve_QLearning(df)
+total_u_qlearning = evaluate_policy(df, qlearning_policy, mdp)
+println(total_u_qlearning)
+
+random_policy = generate_random_policy()
+total_u_random_policy = evaluate_policy(df, random_policy, mdp)
+println(total_u_random_policy)
+

@@ -2,6 +2,7 @@
 using POMDPs
 using Distributions
 using Random
+using DelimitedFiles
 
 # POMDPModelTools has tools that help build the MDP definition
 using POMDPModelTools
@@ -173,16 +174,34 @@ end
 
 POMDPs.isterminal(mdp::taxi_world, s::taxi_world_state) = s.received_request
 
-POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(10, 10, 50, 0, false))
-
 mdp = taxi_world()
 
 right_policy = FunctionPolicy(s->:right)
 policy = RandomPolicy(mdp)
 
-for (s,a,r) in stepthrough(mdp, policy, "s,a,r", max_steps=1000)
-    @show s
-    @show a
-    @show r
-    println()
+function get_action_index(act::Symbol)
+    if act==:up
+        return 1
+    elseif act==:down
+        return 2
+    elseif act==:left
+        return 3
+    elseif act==:right
+        return 4
+    elseif act==:stay
+        return 5
+    end
+end;
+
+data = Vector()
+push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
+
+for x in 1:10
+    for y in 1:10
+        POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, 50, 0, false))
+        for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+            push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+        end
+    end
 end
+writedlm("dataset.txt", data)
