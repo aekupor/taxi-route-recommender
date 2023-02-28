@@ -11,6 +11,7 @@ function read_in_file(inputfilename)
     return df
 end
 
+#ashlee todo: change to LinearIndices/CartesianIndices. see doc on project 1
 function covert_state_to_number(s::taxi_world_state) 
     # special cases to handle not going over 100 states (since 1010 > 100)
     if s.x == 10 && s.y == 10 
@@ -147,6 +148,7 @@ mdp = taxi_world()
 
 df = read_in_file("dataset.txt")
 test_data = read_in_file("test_dataset.txt")
+
 qlearning_policy = solve_QLearning(df)
 total_u_qlearning = evaluate_policy(test_data, qlearning_policy, mdp)
 println(total_u_qlearning)
