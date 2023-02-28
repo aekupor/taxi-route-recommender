@@ -86,8 +86,6 @@ function update!(model::QLearning, s, a, r, sp)
     return model
 end
 
-
-# TODO!!!
 function evaluate_policy(df, policy, mdp)
     total_u = 0
     current_row = 0
@@ -148,11 +146,12 @@ discount_rate = 0.95
 mdp = taxi_world()
 
 df = read_in_file("dataset.txt")
+test_data = read_in_file("test_dataset.txt")
 qlearning_policy = solve_QLearning(df)
-total_u_qlearning = evaluate_policy(df, qlearning_policy, mdp)
+total_u_qlearning = evaluate_policy(test_data, qlearning_policy, mdp)
 println(total_u_qlearning)
 
 random_policy = generate_random_policy()
-total_u_random_policy = evaluate_policy(df, random_policy, mdp)
+total_u_random_policy = evaluate_policy(test_data, random_policy, mdp)
 println(total_u_random_policy)
 
