@@ -11,18 +11,9 @@ function read_in_file(inputfilename)
     return df
 end
 
-#ashlee todo: change to LinearIndices/CartesianIndices. see doc on project 1
-function covert_state_to_number(s::taxi_world_state) 
-    # special cases to handle not going over 100 states (since 1010 > 100)
-    if s.x == 10 && s.y == 10 
-        return 1
-    elseif s.x == 10
-        return s.y
-    elseif s.y == 10
-       return s.x
-    end
-    number = string(s.x) * string(s.y) # todo: add in time, temp, request later 
-    return parse(Int64, number)
+function convert_state_to_number(s::taxi_world_state) 
+    linear = LinearIndices((1:10, 1:10, 1:4, 1:4))
+    return linear[s.x, s.y, s.temp, s.time]
 end
 
 function convert_number_to_action(a::Int64) 
@@ -41,8 +32,7 @@ function convert_number_to_action(a::Int64)
 end
 
 function solve_QLearning(df)
-    # number of states = 10x * 10y (add in temp, time, request later)
-    number_states = 100
+    number_states = 1600
     number_actions = 5
     
     model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
@@ -50,11 +40,12 @@ function solve_QLearning(df)
         for dfr in eachrow(df)
             s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
             sp = taxi_world_state(dfr.sp_x, dfr.sp_y, dfr.sp_temp, dfr.sp_time, dfr.sp_received_request)
-            model = update!(model, covert_state_to_number(s), dfr.a, dfr.r, covert_state_to_number(sp))
+            model = update!(model, convert_state_to_number(s), dfr.a, dfr.r, convert_state_to_number(sp))
         end
     end
 
-    actions = Vector{Int}()
+    
+    actions = Dict()
     for s in model.S
         best_value = model.Q[s, 1]
         best_action = 1
@@ -64,7 +55,7 @@ function solve_QLearning(df)
                 best_action = a
             end
         end
-        push!(actions, best_action)
+        actions[s] = best_action
     end
     return actions
 end
@@ -92,7 +83,7 @@ function evaluate_policy(df, policy, mdp)
     current_row = 0
     for dfr in eachrow(df)
         s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
-        s_num = covert_state_to_number(s)
+        s_num = convert_state_to_number(s)
         a = convert_number_to_action(policy[s_num])
         transitions = POMDPs.transition(mdp, s, a)
 
@@ -125,19 +116,19 @@ function evaluate_policy(df, policy, mdp)
 end
 
 function generate_random_policy()
-    actions = []
-    for i in 1:100
+    actions = Dict()
+    for i in 1:1600
         num = rand()
         if num < .2
-            push!(actions, 1)
+            actions[i] = 1 
         elseif num < .4
-            push!(actions, 2)
+            actions[i] = 2
         elseif num < .6
-            push!(actions, 3)
+            actions[i] = 3
         elseif num < .8
-            push!(actions, 4)
+            actions[i] = 4
         else
-            push!(actions, 5)
+            actions[i] = 5
         end
     end
     return actions

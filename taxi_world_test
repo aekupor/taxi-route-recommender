@@ -49,8 +49,8 @@ function POMDPs.states(mdp::taxi_world)
     s = taxi_world_state[] # initialize an array of GridWorldStates
     # loop over all our states, remeber there are two binary variables:
     # done (d)
-    temps = [0,1,2,3] # corresponds to 60, 70, 80, 90 degrees
-    times = [0,1,2,3] # corresponds to 0, 6, 12, 18 (military time)
+    temps = [1,2,3,4] # corresponds to 60, 70, 80, 90 degrees
+    times = [1,2,3,4] # corresponds to 0, 6, 12, 18 (military time)
     for d = 0:1, y = 1:mdp.size_y, x = 1:mdp.size_x, time in times, temp in temps
         push!(s, taxi_world_state(x, y, temp, time, d))
     end
@@ -198,9 +198,13 @@ push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp
 
 for x in 1:10
     for y in 1:10
-        POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, 0, 0, false))
-        for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
-            push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+        for time in 1:4
+            for temp in 1:4
+                POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
+                for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+                    push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+                end
+            end
         end
     end
 end
@@ -208,9 +212,13 @@ writedlm("dataset.txt", data)
 
 for x in 1:10
     for y in 1:10
-        POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, 0, 0, false))
-        for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
-            push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+        for time in 1:4
+            for temp in 1:4
+                POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
+                for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+                    push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+                end
+            end
         end
     end
 end
