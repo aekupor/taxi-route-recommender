@@ -12,7 +12,7 @@ function read_in_file(inputfilename)
 end
 
 function convert_state_to_number(s::taxi_world_state) 
-    linear = LinearIndices((1:10, 1:10, 1:4, 1:4))
+    linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4))
     return linear[s.x, s.y, s.temp, s.time]
 end
 
@@ -31,10 +31,10 @@ function convert_number_to_action(a::Int64)
     end
 end
 
+number_states = size_x * size_y * 4 * 4
+number_actions = 5
+
 function solve_QLearning(df)
-    number_states = 1600
-    number_actions = 5
-    
     model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
     for k in 1:100
         for dfr in eachrow(df)
@@ -117,7 +117,7 @@ end
 
 function generate_random_policy()
     actions = Dict()
-    for i in 1:1600
+    for i in 1:number_states
         num = rand()
         if num < .2
             actions[i] = 1 

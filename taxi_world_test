@@ -11,6 +11,9 @@ using POMDPPolicies
 # POMDPSimulators provide functions for running MDP simulations
 using POMDPSimulators
 
+size_x = 100
+size_y = 100
+
 struct taxi_world_state
     x::Int64 # x position
     y::Int64 # y position
@@ -34,8 +37,9 @@ end
 
 # we use key worded arguments so we can change any of the values we pass in 
 
-function taxi_world(;sx::Int64=10, # size_x
-    sy::Int64=10, # size_y
+
+function taxi_world(;sx::Int64=size_x, # size_x
+    sy::Int64=size_y, # size_y
     rfr::Float64=50., # reward for request
     rfg::Float64=-5., #reward for gas
     discount_factor::Float64=0.9)
@@ -105,7 +109,7 @@ function POMDPs.transition(mdp::taxi_world, state::taxi_world_state, action::Sym
     end
 
     # places that are busy
-    hot_spots = [[2, 3], [4, 7], [1, 9]]
+    hot_spots = [[16,47], [71, 14], [53, 52], [66, 62],	[56, 83], [18, 43],	[26, 29], [66, 21], [84, 39], [58, 42]]
     curr_dist_from_hs = minimum(distance(x, y, point[1], point[2]) for point in hot_spots)
     stuck_prob = 1 / (curr_dist_from_hs + 1)
 
@@ -196,8 +200,8 @@ end;
 data = Vector()
 push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
 
-for x in 1:10
-    for y in 1:10
+for x in 1:size_x
+    for y in 1:size_y
         for time in 1:4
             for temp in 1:4
                 POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
@@ -210,8 +214,8 @@ for x in 1:10
 end
 writedlm("dataset.txt", data)
 
-for x in 1:10
-    for y in 1:10
+for x in 1:size_x
+    for y in 1:size_y
         for time in 1:4
             for temp in 1:4
                 POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
