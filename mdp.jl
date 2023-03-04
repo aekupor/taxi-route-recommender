@@ -1,9 +1,12 @@
 using CSV
 using DataFrames
 using StatsBase
+using TabularTDLearning
+using POMDPModels
+using POMDPTools
 
 
-include("taxi_world_test") 
+include("taxi_world_final.jl") 
 
 
 function read_in_file(inputfilename)
@@ -78,13 +81,21 @@ function update!(model::QLearning, s, a, r, sp)
     return model
 end
 
-function evaluate_policy(df, policy, mdp)
+function evaluate_policy(df, policy, mdp, type)
     total_u = 0
     current_row = 0
     for dfr in eachrow(df)
         s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
         s_num = convert_state_to_number(s)
-        a = convert_number_to_action(policy[s_num])
+        a = 1
+        if type == "value_table"
+            a = findmax(policy.value_table[s_num])[2]
+        elseif type == "random"
+            a = rand(1:5)
+        else 
+            a = policy[s_num]
+        end
+        a = convert_number_to_action(a)
         transitions = POMDPs.transition(mdp, s, a)
 
         neighbors = Vector{taxi_world_state}()
@@ -137,14 +148,40 @@ end
 discount_rate = 0.95
 mdp = taxi_world()
 
-df = read_in_file("dataset.txt")
-test_data = read_in_file("test_dataset.txt")
+
+df = read_in_file("train_dataset.txt")
+test_data = read_in_file("train_dataset.txt") #todo: move back to test once it's done
+
 
 qlearning_policy = solve_QLearning(df)
-total_u_qlearning = evaluate_policy(test_data, qlearning_policy, mdp)
+total_u_qlearning = evaluate_policy(test_data, qlearning_policy, mdp, "normal")
+println("my q learning")
 println(total_u_qlearning)
 
 random_policy = generate_random_policy()
-total_u_random_policy = evaluate_policy(test_data, random_policy, mdp)
+total_u_random_policy = evaluate_policy(test_data, random_policy, mdp, "normal")
+println("my random")
 println(total_u_random_policy)
 
+"""
+exppolicy = EpsGreedyPolicy(mdp, 0.9)
+
+#Q-learning
+solver = QLearningSolver(exploration_policy=exppolicy, learning_rate=0.1, n_episodes=50000, max_episode_length=100, eval_every=500, n_eval_traj=100)
+policy = solve(solver, mdp)
+total_u_given_qlearning = evaluate_policy(test_data, policy, mdp, "value_table")
+println("given q learning")
+println(total_u_given_qlearning)
+
+#random
+total_u_given_random = evaluate_policy(test_data, RandomPolicy(mdp), mdp, "random")
+println("given random")
+println(total_u_given_random)
+
+#SARSA 
+solver = SARSASolver(exploration_policy=exppolicy, learning_rate=0.1, n_episodes=5000, max_episode_length=50, eval_every=50, n_eval_traj=100)
+policy = solve(solver, mdp)
+total_u_given_sarsa = evaluate_policy(test_data, policy, mdp, "value_table")
+println("given sarsa")
+println(total_u_given_sarsa)
+"""
