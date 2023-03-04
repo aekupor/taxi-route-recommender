@@ -63,6 +63,32 @@ function solve_QLearning(df)
     return actions
 end
 
+function solve_Sarsa(df)
+    model = Sarsa(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01, nothing)
+    for k in 1:100
+        for dfr in eachrow(df)
+            s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
+            sp = taxi_world_state(dfr.sp_x, dfr.sp_y, dfr.sp_temp, dfr.sp_time, dfr.sp_received_request)
+            model = update!(model, convert_state_to_number(s), dfr.a, dfr.r, convert_state_to_number(sp))
+        end
+    end
+
+    
+    actions = Dict()
+    for s in model.S
+        best_value = model.Q[s, 1]
+        best_action = 1
+        for a in model.A
+            if model.Q[s,a] > best_value
+                best_value = model.Q[s,a]
+                best_action = a
+            end
+        end
+        actions[s] = best_action
+    end
+    return actions
+end
+
 mutable struct QLearning
     S # state space (assumes 1:nstates)
     A # action space (assumes 1:nactions)
@@ -78,6 +104,26 @@ end
 function update!(model::QLearning, s, a, r, sp)
     Y, Q, alpha = model.Y, model.Q, model.alpha
     Q[s,a] += alpha*(r + Y*maximum(Q[sp,:]) - Q[s,a])
+    return model
+end
+
+mutable struct Sarsa
+    S # state space (assumes 1:nstates)
+    A # action space (assumes 1:nactions)
+    Y # discount
+    Q # action value function
+    a # learning rate
+    l # most recent experience tuple (s,a,r)
+end
+
+lookahead(model::Sarsa, s, a) = model.Q[s,a]
+    
+function update!(model::Sarsa, s, a, r, sp)
+    if model.l != nothing
+        Y, Q, alpha, l = model.Y, model.Q, model.a, model.l
+        model.Q[l.s,l.a] += alpha*(l.r + Y*Q[s,a] - Q[l.s,l.a])
+    end
+    model.l = (s=s, a=a, r=r)
     return model
 end
 
@@ -152,16 +198,23 @@ mdp = taxi_world()
 df = read_in_file("train_dataset.txt")
 test_data = read_in_file("train_dataset.txt") #todo: move back to test once it's done
 
-
+# q learning
 qlearning_policy = solve_QLearning(df)
 total_u_qlearning = evaluate_policy(test_data, qlearning_policy, mdp, "normal")
 println("my q learning")
 println(total_u_qlearning)
 
+#random
 random_policy = generate_random_policy()
 total_u_random_policy = evaluate_policy(test_data, random_policy, mdp, "normal")
 println("my random")
 println(total_u_random_policy)
+
+#sarsa
+sarsa_policy = solve_Sarsa(df)
+total_u_sarsa = evaluate_policy(test_data, sarsa_policy, mdp, "normal")
+println("my sarsa")
+println(total_u_sarsa)
 
 """
 exppolicy = EpsGreedyPolicy(mdp, 0.9)
