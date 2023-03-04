@@ -26,7 +26,7 @@ mutable struct GridWorld_2 <: MDP{GridWorldState_2, Symbol} # Note that our MDP 
     reward_states::Vector{GridWorldState_2} # the states in which agent recieves reward
     reward_values::Vector{Float64} # reward values for those states
     tprob::Float64 # probability of transitioning to the desired state
-    discount_factor::Float64 # disocunt factor
+    discount_factor::Float64 # discount factor
 end
      
 #we use key worded arguments so we can change any of the values we pass in 
