@@ -4,6 +4,7 @@ using StatsBase
 using TabularTDLearning
 using POMDPModels
 using POMDPTools
+using Random
 
 
 include("taxi_world_final.jl") 
@@ -195,26 +196,36 @@ discount_rate = 0.95
 mdp = taxi_world()
 
 
-df = read_in_file("train_dataset.txt")
-test_data = read_in_file("train_dataset.txt") #todo: move back to test once it's done
+df_full = read_in_file("full_dataset.txt")
+println("Done")
+# shuffle the dataset
+df_permuted = df_full[shuffle(1:size(df_full, 1)), :]
+println("Done")
+# Split the dataframe into train and test sets
+train_size = 0.8
+n_train = Int(round(train_size * size(df_permuted, 1)))
+train_df = df_permuted[1:n_train, :]
+println("Done")
+test_df = df_permuted[n_train+1:end, :]
+println("Done")
 
-# q learning
-qlearning_policy = solve_QLearning(df)
-total_u_qlearning = evaluate_policy(test_data, qlearning_policy, mdp, "normal")
-println("my q learning")
-println(total_u_qlearning)
+# # q learning
+# qlearning_policy = solve_QLearning(train_df)
+# total_u_qlearning = evaluate_policy(test_df, qlearning_policy, mdp, "normal")
+# println("my q learning")
+# println(total_u_qlearning)
 
 #random
-random_policy = generate_random_policy()
-total_u_random_policy = evaluate_policy(test_data, random_policy, mdp, "normal")
-println("my random")
-println(total_u_random_policy)
+# random_policy = generate_random_policy()
+# total_u_random_policy = evaluate_policy(test_df, random_policy, mdp, "normal")
+# println("my random")
+# println(total_u_random_policy)
 
 #sarsa
-sarsa_policy = solve_Sarsa(df)
-total_u_sarsa = evaluate_policy(test_data, sarsa_policy, mdp, "normal")
-println("my sarsa")
-println(total_u_sarsa)
+# sarsa_policy = solve_Sarsa(train_df)
+# total_u_sarsa = evaluate_policy(test_df, sarsa_policy, mdp, "normal")
+# println("my sarsa")
+# println(total_u_sarsa)
 
 """
 exppolicy = EpsGreedyPolicy(mdp, 0.9)
