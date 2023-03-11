@@ -5,6 +5,8 @@ using TabularTDLearning
 using POMDPModels
 using POMDPTools
 using Random
+using Plots
+using LinearAlgebra
 
 
 include("taxi_world_final.jl") 
@@ -16,8 +18,8 @@ function read_in_file(inputfilename)
 end
 
 function convert_state_to_number(s::taxi_world_state) 
-    linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4))
-    return linear[s.x, s.y, s.temp, s.time]
+    linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4, 1:2))
+    return linear[s.x, s.y, s.temp, s.time, Int(s.received_request) + 1]
 end
 
 function convert_number_to_action(a::Int64) 
@@ -35,20 +37,27 @@ function convert_number_to_action(a::Int64)
     end
 end
 
-number_states = size_x * size_y * 4 * 4
-number_actions = 5
+number_states = size_x * size_y * 4 * 4 * 2
+number_actions = 5 
 
-function solve_QLearning(df)
-    model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
-    for k in 1:100
+function solve_QLearning(df, model)
+    Q_old = copy(model.Q)
+    for k in 1:3000
         for dfr in eachrow(df)
             s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
             sp = taxi_world_state(dfr.sp_x, dfr.sp_y, dfr.sp_temp, dfr.sp_time, dfr.sp_received_request)
             model = update!(model, convert_state_to_number(s), dfr.a, dfr.r, convert_state_to_number(sp))
         end
+        if mod(k, 100) == 0
+            diff = norm(Q_old - model.Q)
+            println(diff)
+            if diff < 1
+                print("The epoch number with difference smaller than 1 is $k")
+            end
+        end
+        Q_old = copy(model.Q)
     end
 
-    
     actions = Dict()
     for s in model.S
         best_value = model.Q[s, 1]
@@ -61,17 +70,22 @@ function solve_QLearning(df)
         end
         actions[s] = best_action
     end
-    return actions
+    return model, actions
 end
 
 function solve_Sarsa(df)
     model = Sarsa(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01, nothing)
-    for k in 1:100
+    Q_old = copy(model.Q)
+    for k in 1:3000
         for dfr in eachrow(df)
             s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
             sp = taxi_world_state(dfr.sp_x, dfr.sp_y, dfr.sp_temp, dfr.sp_time, dfr.sp_received_request)
             model = update!(model, convert_state_to_number(s), dfr.a, dfr.r, convert_state_to_number(sp))
         end
+        if mod(k, 100) == 0
+            println(norm(Q_old - model.Q))
+        end
+        Q_old = copy(model.Q)
     end
 
     
@@ -192,11 +206,29 @@ function generate_random_policy()
     return actions
 end
 
-discount_rate = 0.95
+discount_rate = 0.9
 mdp = taxi_world()
 
+# function to make heatmap 
+function make_heatmap_full(policy, temp, time, heatmap_name)
+    heatmap_matrix = zeros(100, 100)
+    for x in 1:100
+        for y in 1:100
+            linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4, 1:2))
+            state_num = linear[x, y, temp, time, 1]
+            action = policy[state_num]
+            heatmap_matrix[x, y] = action
+        end
+    end
 
-df_full = read_in_file("full_dataset.txt")
+    heatmap(1:size(heatmap_matrix,1), 1:size(heatmap_matrix,2), heatmap_matrix, c=cgrad([:blue, :white,:red, :yellow]),
+    xlabel="x values", ylabel="y values", title="Heatmap for temp = $temp and time = $time", cgrad = cgrad(:matter, 5, categorical = true)
+    )
+    savefig(heatmap_name)
+end
+
+
+df_full = read_in_file("taxi-route-recommender/full_dataset.txt")
 println("Done")
 # shuffle the dataset
 df_permuted = df_full[shuffle(1:size(df_full, 1)), :]
@@ -209,19 +241,64 @@ println("Done")
 test_df = df_permuted[n_train+1:end, :]
 println("Done")
 
-# # q learning
-# qlearning_policy = solve_QLearning(train_df)
+
+# q learning
+model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
+model, qlearning_policy = solve_QLearning(train_df, model)
+
+# make heatmaps
+for time in 1:4
+    for temp in 1:4 
+        make_heatmap_full(q_learning_policy, temp, time, "heatmap_$(time * 4 + temp)")
+    end
+end
+
+
+
+# heatmap_matrix_1 = zeros(100, 100)
+
+# for x in 1:100
+#     for y in 1:100
+#         linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4, 1:2))
+#         state_num = linear[x, y, 1, 1, 1]
+#         action = qlearning_policy[state_num]
+#         heatmap_matrix[x, y] = action
+#     end
+# end
+
+# heatmap(1:size(heatmap_matrix,1), 1:size(heatmap_matrix,2), heatmap_matrix, c=cgrad([:blue, :white,:red, :yellow]),
+# xlabel="x values", ylabel="y values", title="Heatmap for temp = 1 and time = 1")
+# savefig("my_heatmap.png")
+
+
+heatmap_matrix_2 = zeros(100, 100)
+
+for x in 35:44
+    for y in 85:94
+        linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4, 1:2))
+        state_num = linear[x, y, 1, 1, 1]
+        action = qlearning_policy[state_num]
+        heatmap_matrix_2[x, y] = action
+    end
+end
+
+heatmap(1:size(heatmap_matrix_2,1), 1:size(heatmap_matrix_2,2), heatmap_matrix_2, c=cgrad([:blue, :white,:red, :yellow]),
+xlabel="x values", ylabel="y values", title="Heatmap for temp = 1 and time = 0")
+savefig("zoomed_in.png")
+
+
+
 # total_u_qlearning = evaluate_policy(test_df, qlearning_policy, mdp, "normal")
 # println("my q learning")
 # println(total_u_qlearning)
 
-#random
+# # random
 # random_policy = generate_random_policy()
 # total_u_random_policy = evaluate_policy(test_df, random_policy, mdp, "normal")
 # println("my random")
 # println(total_u_random_policy)
 
-#sarsa
+# #sarsa
 # sarsa_policy = solve_Sarsa(train_df)
 # total_u_sarsa = evaluate_policy(test_df, sarsa_policy, mdp, "normal")
 # println("my sarsa")
