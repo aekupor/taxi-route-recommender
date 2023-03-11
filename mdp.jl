@@ -7,14 +7,23 @@ using POMDPTools
 using Random
 using Plots
 using LinearAlgebra
-
+using Printf
 
 include("taxi_world_final.jl") 
 
-
+## function to read in file 
 function read_in_file(inputfilename)
     df = CSV.read(inputfilename, DataFrame)
     return df
+end
+
+
+function write_policy(policy, policy_filename)
+    open(policy_filename, "w") do io
+        for n in eachindex(policy)
+            @printf(io, "%s\n", policy[n])
+        end
+    end
 end
 
 function convert_state_to_number(s::taxi_world_state) 
@@ -42,7 +51,7 @@ number_actions = 5
 
 function solve_QLearning(df, model)
     Q_old = copy(model.Q)
-    for k in 1:3000
+    for k in 1:10
         for dfr in eachrow(df)
             s = taxi_world_state(dfr.x, dfr.y, dfr.temp, dfr.time, dfr.received_request)
             sp = taxi_world_state(dfr.sp_x, dfr.sp_y, dfr.sp_temp, dfr.sp_time, dfr.sp_received_request)
@@ -57,19 +66,19 @@ function solve_QLearning(df, model)
         end
         Q_old = copy(model.Q)
     end
-
-    actions = Dict()
-    for s in model.S
-        best_value = model.Q[s, 1]
-        best_action = 1
-        for a in model.A
-            if model.Q[s,a] > best_value
-                best_value = model.Q[s,a]
-                best_action = a
-            end
-        end
-        actions[s] = best_action
-    end
+    actions = mapslices(argmax,model.Q,dims=2)
+    # actions = Dict()
+    # for s in model.S
+    #     best_value = model.Q[s, 1]
+    #     best_action = 1
+    #     for a in model.A
+    #         if model.Q[s,a] > best_value
+    #             best_value = model.Q[s,a]
+    #             best_action = a
+    #         end
+    #     end
+    #     actions[s] = best_action
+    # end
     return model, actions
 end
 
@@ -87,20 +96,19 @@ function solve_Sarsa(df)
         end
         Q_old = copy(model.Q)
     end
-
-    
-    actions = Dict()
-    for s in model.S
-        best_value = model.Q[s, 1]
-        best_action = 1
-        for a in model.A
-            if model.Q[s,a] > best_value
-                best_value = model.Q[s,a]
-                best_action = a
-            end
-        end
-        actions[s] = best_action
-    end
+    actions = mapslices(argmax,model.Q,dims=2)
+    # actions = Dict()
+    # for s in model.S
+    #     best_value = model.Q[s, 1]
+    #     best_action = 1
+    #     for a in model.A
+    #         if model.Q[s,a] > best_value
+    #             best_value = model.Q[s,a]
+    #             best_action = a
+    #         end
+    #     end
+    #     actions[s] = best_action
+    # end
     return actions
 end
 
@@ -249,7 +257,7 @@ model, qlearning_policy = solve_QLearning(train_df, model)
 # make heatmaps
 for time in 1:4
     for temp in 1:4 
-        make_heatmap_full(q_learning_policy, temp, time, "heatmap_$(time * 4 + temp)")
+        make_heatmap_full(qlearning_policy, temp, time, "heatmap_$(time * 4 + temp)")
     end
 end
 
@@ -288,9 +296,9 @@ savefig("zoomed_in.png")
 
 
 
-# total_u_qlearning = evaluate_policy(test_df, qlearning_policy, mdp, "normal")
-# println("my q learning")
-# println(total_u_qlearning)
+total_u_qlearning = evaluate_policy(test_df, qlearning_policy, mdp, "normal")
+println("my q learning")
+println(total_u_qlearning)
 
 # # random
 # random_policy = generate_random_policy()
