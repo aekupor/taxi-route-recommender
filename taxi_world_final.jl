@@ -120,16 +120,15 @@ function POMDPs.transition(mdp::taxi_world, state::taxi_world_state, action::Sym
     
 
     neighbors = [
-        taxi_world_state(x+1, y, temp, time, check_in_hot_spot(x+1, y, hot_spots)), # right
-        taxi_world_state(x-1, y, temp, time, check_in_hot_spot(x-1, y, hot_spots)), # left
-        taxi_world_state(x, y-1, temp, time, check_in_hot_spot(x, y-1, hot_spots)), # down
         taxi_world_state(x, y+1, temp, time, check_in_hot_spot(x, y+1, hot_spots)), # up
+        taxi_world_state(x, y-1, temp, time, check_in_hot_spot(x, y-1, hot_spots)), # down
+        taxi_world_state(x-1, y, temp, time, check_in_hot_spot(x-1, y, hot_spots)), # left
+        taxi_world_state(x+1, y, temp, time, check_in_hot_spot(x+1, y, hot_spots)), # right
         taxi_world_state(x, y, temp, time, check_in_hot_spot(x, y, hot_spots)) #stay
         ] 
     
-    targets = Dict(:right=>1, :left=>2, :down=>3, :up=>4, :stay=>5) 
+    targets = Dict(:up=>1, :down=>2, :left=>3, :right=>4, :stay=>5) 
     target = targets[a]
-    
     probability = fill(0.0, 5)
 
     if !inbounds(mdp, neighbors[target])
@@ -149,7 +148,7 @@ function POMDPs.reward(mdp::taxi_world, state::taxi_world_state, action::Symbol,
     if state.received_request
         return 0.0
     end
-    targets = Dict(:right=>1, :left=>2, :down=>3, :up=>4, :stay=>5)
+    targets = Dict(:up=>1, :down=>2, :left=>3, :right=>4, :stay=>5) 
     if state != sp
         r += mdp.reward_for_gas
     end
@@ -206,25 +205,21 @@ end;
 data = Vector()
 push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
 
-POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(3, 4, 1, 1, false))
-for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=5)
-    push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
-end
-writedlm("test_dataset.txt", data)
 
-# for x in 1:size_x
-#     for y in 1:size_y
-#         for time in 1:4
-#             for temp in 1:4
-#                 POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
-#                 for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=5)
-#                     push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
-#                 end
-#             end
-#         end
-#     end
-# end
-# writedlm("train_dataset.txt", data)
+for x in 1:size_x
+    for y in 1:size_y
+        for time in 1:4
+            for temp in 1:4
+                mdp = taxi_world()
+                POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
+                for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+                    push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+                end
+            end
+        end
+    end
+end
+writedlm("train_dataset.txt", data)
 
 # for x in 1:size_x
 #     for y in 1:size_y
