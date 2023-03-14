@@ -3,8 +3,10 @@ using POMDPs
 using Distributions
 using Random
 using DelimitedFiles
+using POMDPModels
 
-println("Hello")
+
+#println("Hello")
 # POMDPModelTools has tools that help build the MDP definition
 using POMDPModelTools
 # POMDPPolicies provides functions to help define simple policies
@@ -57,10 +59,6 @@ function POMDPs.states(mdp::taxi_world)
     end
     return s
 end;
-
-mdp = taxi_world()
-state_space = states(mdp);
-state_space[1]
 
 POMDPs.actions(mdp::taxi_world) = [:up, :down, :left, :right, :stay];
 
@@ -183,11 +181,6 @@ end
 
 POMDPs.isterminal(mdp::taxi_world, s::taxi_world_state) = s.received_request
 
-mdp = taxi_world()
-
-right_policy = FunctionPolicy(s->:right)
-policy = RandomPolicy(mdp)
-
 function get_action_index(act::Symbol)
     if act==:up
         return 1
@@ -202,35 +195,28 @@ function get_action_index(act::Symbol)
     end
 end;
 
-data = Vector()
-push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
 
 
-for x in 1:size_x
-    for y in 1:size_y
-        for time in 1:4
-            for temp in 1:4
-                mdp = taxi_world()
-                POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
-                for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
-                    push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
-                end
-            end
-        end
-    end
-end
-writedlm("train_dataset.txt", data)
+# TODO: COMMENT ME OUT!!!!!!!!!
 
-# for x in 1:size_x
-#     for y in 1:size_y
-#         for time in 1:4
-#             for temp in 1:4
-#                 POMDPs.initialstate(pomdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
-#                 for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=5)
-#                     push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+# mdp = taxi_world() # create the taxi world MDP
+# policy = RandomPolicy(mdp)
+# data = Vector()
+# push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
+
+# for i in 1:10
+#     for x in 1:100
+#         for y in 1:100
+#             for time in 1:4
+#                 for temp in 1:4
+#                     POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
+#                     for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+#                         push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+#                         writedlm("train_dataset_new.txt", data)
+#                     end
 #                 end
 #             end
 #         end
 #     end
 # end
-# writedlm("test_dataset.txt", data)
+# writedlm("train_dataset_new.txt", data)
