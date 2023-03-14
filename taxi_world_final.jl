@@ -199,24 +199,24 @@ end;
 
 # TODO: COMMENT ME OUT!!!!!!!!!
 
-# mdp = taxi_world() # create the taxi world MDP
-# policy = RandomPolicy(mdp)
-# data = Vector()
-# push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
+ mdp = taxi_world() # create the taxi world MDP
+ policy = RandomPolicy(mdp)
+ data = Vector()
+ push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
 
-# for i in 1:10
-#     for x in 1:100
-#         for y in 1:100
-#             for time in 1:4
-#                 for temp in 1:4
-#                     POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
-#                     for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
-#                         push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
-#                         writedlm("train_dataset_new.txt", data)
-#                     end
-#                 end
-#             end
-#         end
-#     end
-# end
-# writedlm("train_dataset_new.txt", data)
+for i in 1:10
+     for x in 1:100
+         for y in 1:100
+             for time in 1:4
+                 for temp in 1:4
+                     POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
+                     for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+                         push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
+                         writedlm("train_dataset_new.txt", data)
+                     end
+                 end
+             end
+         end
+     end
+ end
+ writedlm("train_dataset_new.txt", data)
