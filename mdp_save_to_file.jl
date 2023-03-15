@@ -20,8 +20,8 @@ function read_in_file(inputfilename)
 end
 
 function convert_state_to_number(s::taxi_world_state) 
-    linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4, 1:2))
-    return linear[s.x, s.y, s.temp, s.time, Int(s.received_request) + 1]
+    linear = LinearIndices((1:size_x, 1:size_y, 1:2)) #1:4, 1:4, 1:2))
+    return linear[s.x, s.y, Int(s.received_request) + 1] #s.temp, s.time, Int(s.received_request) + 1]
 end
 
 function convert_number_to_action(a::Int64) 
@@ -39,7 +39,7 @@ function convert_number_to_action(a::Int64)
     end
 end
 
-number_states = size_x * size_y * 4 * 4 * 2
+number_states = size_x * size_y * 2 #4 * 4 
 number_actions = 5 
 
 function solve_QLearning(df, model)
@@ -55,24 +55,31 @@ function solve_QLearning(df, model)
             println(diff)
             if diff < 1
                 print("The epoch number with difference smaller than 1 is $k")
+                break
             end
         end
         Q_old = copy(model.Q)
     end
 
-    actions = Vector()
-    for s in model.S
-        best_value = model.Q[s, 1]
-        best_action = 1
-        for a in model.A
-            if model.Q[s,a] > best_value
-                best_value = model.Q[s,a]
-                best_action = a
+    actions = Dict()
+    for x in 1:size_x
+        for y in 1:size_y
+          #  for request in 1:2
+            s= convert_state_to_number(taxi_world_state(x, y, 1, 1, false))
+            best_value = model.Q[s, 1]
+            best_action = 1
+            for a in model.A
+                if model.Q[s,a] > best_value
+                    best_value = model.Q[s,a]
+                    best_action = a
+                end
             end
+            actions[s] = best_action
         end
-        push!(actions, best_action)
     end
-    writedlm("q_learning_01_take2.txt", actions)
+#end
+    writedlm("q_learning_small_notimetemp_alpha_01.txt", actions)
+    return actions
 end
 
 function solve_Sarsa(df)
@@ -86,23 +93,30 @@ function solve_Sarsa(df)
         end
         if mod(k, 100) == 0
             println(norm(Q_old - model.Q))
+            break
         end
         Q_old = copy(model.Q)
     end
 
     
     actions = Dict()
-    for s in model.S
-        best_value = model.Q[s, 1]
-        best_action = 1
-        for a in model.A
-            if model.Q[s,a] > best_value
-                best_value = model.Q[s,a]
-                best_action = a
+    for x in 1:size_x
+        for y in 1:size_y
+          #  for request in 1:2
+            s= convert_state_to_number(taxi_world_state(x, y, 1, 1, false))
+            best_value = model.Q[s, 1]
+            best_action = 1
+            for a in model.A
+                if model.Q[s,a] > best_value
+                    best_value = model.Q[s,a]
+                    best_action = a
+                end
             end
+            actions[s] = best_action
         end
-        actions[s] = best_action
     end
+#end
+    writedlm("sarsa_small_notimetemp_alpha_01.txt", actions)
     return actions
 end
 
@@ -126,7 +140,7 @@ end
 
 function update_decay!(model::QLearning, s, a, r, sp, epoch)
     Y, Q = model.Y, model.Q
-    alpha = model.alpha / (1 + 0.7* epoch)
+    alpha = model.alpha / (1 + 0.7 * epoch)
     Q[s,a] += alpha*(r + Y*maximum(Q[sp,:]) - Q[s,a])
     return model
 end
@@ -215,14 +229,11 @@ function generate_random_policy()
     return actions
 end
 
-discount_rate = 0.9
-mdp = taxi_world()
-
 # function to make heatmap 
 function make_heatmap_full(policy, temp, time, heatmap_name)
-    heatmap_matrix = zeros(100, 100)
-    for x in 1:100
-        for y in 1:100
+    heatmap_matrix = zeros(size_x, size_y)
+    for x in 1:size_x
+        for y in 1:size_y
             linear = LinearIndices((1:size_x, 1:size_y, 1:4, 1:4, 1:2))
             state_num = linear[x, y, temp, time, 1]
             action = policy[state_num]
@@ -236,30 +247,69 @@ function make_heatmap_full(policy, temp, time, heatmap_name)
     savefig(heatmap_name)
 end
 
-
-df_full = read_in_file("full_dataset.txt")
-println("Done")
-# shuffle the dataset
-df_permuted = df_full[shuffle(1:size(df_full, 1)), :]
-println("Done")
-# Split the dataframe into train and test sets
-train_size = 0.8
-n_train = Int(round(train_size * size(df_permuted, 1)))
-train_df = df_permuted[1:n_train, :]
-println("Done")
-test_df = df_permuted[n_train+1:end, :]
-println("Done")
-
+discount_rate = 0.9
+mdp = taxi_world()
+train_df = read_in_file("train_dataset_new_small_notimetemp.txt")
 
 # q learning
 model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
-@time solve_QLearning(train_df, model)
+#@time solve_QLearning(train_df, model)
+q_policy = solve_QLearning(train_df, model)
 
+sarsa_policy = solve_Sarsa(train_df)
+
+#policy_arr = Dict(policy)
+#print(policy_arr)
+q_policy = FunctionPolicy(s->get_action(q_policy[convert_state_to_number(s)]))
+
+sarsa_policy = FunctionPolicy(s->get_action(sarsa_policy[convert_state_to_number(s)]))
+mdp = taxi_world()
+short = RolloutSimulator(max_steps=1000)
+
+random_policy = RandomPolicy(mdp)
+
+total_r_1 = 0.0
+total_r_2 = 0.0
+total_r_3 = 0.0
+trials = [1:1000]
+q_rewards = []
+sarsa_rewards = []
+rand_rewards = []
+
+for trial in 1:1000
+    mdp_3 = taxi_world()
+    mdp_4 = taxi_world()
+    mdp_5 = taxi_world()
+    rand_x =rand(1:size_x)
+    rand_y = rand(1:size_y)
+    temp = 1#rand(1:4)
+    time = 1#rand(1:4)
+    POMDPs.initialstate(mdp_3::taxi_world) = Deterministic(taxi_world_state(rand_x, rand_y, temp, time, false))
+    POMDPs.initialstate(mdp_4::taxi_world) = Deterministic(taxi_world_state(rand_x, rand_y, temp, time, false))
+    POMDPs.initialstate(mdp_5::taxi_world) = Deterministic(taxi_world_state(rand_x, rand_y, temp, time, false))
+    global total_r_1 += simulate(short, mdp_3, q_policy)
+    global total_r_2 += simulate(short, mdp_4, random_policy)
+    global total_r_3 += simulate(short, mdp_4, sarsa_policy)
+    push!(q_rewards, total_r_1)
+    push!(rand_rewards, total_r_2)
+    push!(sarsa_rewards, total_r_3)
+
+end
+
+println("The total reward for Q-learning is $(total_r_1 / 1000)\n")
+println("The total reward for random is $(total_r_2 / 1000)\n")
+println("The total reward for sarsa is $(total_r_3 / 1000)\n")
+
+plot(trials, [q_rewards rand_rewards sarsa_rewards], label=["Total Rewards from Q-learning" "Total Rewards from a Random Policy" "Total Rewards from SARSA"], linewidth=3)
+savefig("myplot_NEW.png")   
+
+
+#policy = CSV.read("q_learning_small_alpha_01.txt", DataFrame)
 # make heatmaps
-# for time in 1:4
-#     for temp in 1:4 
-#         make_heatmap_full(q_learning_policy, temp, time, "heatmap_$(time * 4 + temp)")
-#     end
+ #for time in 1:4
+ #    for temp in 1:4 
+         #make_heatmap_full(policy, 1, 1, "heatmap_$(time + temp)")
+  #   end
 # end
 
 
