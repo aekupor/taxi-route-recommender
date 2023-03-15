@@ -51,8 +51,10 @@ function solve_QLearning(df, model)
         if mod(k, 100) == 0
             diff = norm(Q_old - model.Q)
             println(diff)
-            if diff < 1
-                print("The epoch number with difference smaller than 1 is $k")
+            if diff < .1
+                print("The epoch number with difference smaller than .1 is $k")
+            end
+            if diff == 0
                 break
             end
         end
@@ -88,8 +90,14 @@ function solve_Sarsa(df)
             model = update!(model, convert_state_to_number(s), dfr.a, dfr.r, convert_state_to_number(sp))
         end
         if mod(k, 100) == 0
-            println(norm(Q_old - model.Q))
-            break
+            diff = norm(Q_old - model.Q)
+            println(diff)
+            if diff < .1
+                print("The epoch number with difference smaller than .1 is $k")
+            end
+            if diff == 0
+                break
+            end
         end
         Q_old = copy(model.Q)
     end
@@ -246,11 +254,11 @@ train_df = read_in_file("no_time_no_temp/train_dataset.txt")
 
 # q learning
 model = QLearning(collect(1: number_states), collect(1: number_actions), discount_rate, zeros(number_states, number_actions), .01)
-q_dict = solve_QLearning(train_df, model)
+q_dict = @time solve_QLearning(train_df, model)
 q_policy = FunctionPolicy(s->convert_number_to_action(q_dict[convert_state_to_number(s)]))
 
 # sarsa 
-sarsa_dict = solve_Sarsa(train_df)
+sarsa_dict = @time solve_Sarsa(train_df)
 sarsa_policy = FunctionPolicy(s->convert_number_to_action(sarsa_dict[convert_state_to_number(s)]))
 
 # random
@@ -293,7 +301,7 @@ println("The total reward for random is $(total_r_r / 1000)\n")
 println("The total reward for sarsa is $(total_r_s / 1000)\n")
 
 plot(trials, [q_rewards rand_rewards sarsa_rewards], label=["Total Rewards from Q-learning" "Total Rewards from a Random Policy" "Total Rewards from SARSA"], linewidth=3)
-savefig("no_time_no_temp.png")   
+savefig("reward.png")   
 
 make_heatmap_full(q_dict, 1, 1, "heatmap_q_learning")
 make_heatmap_full(sarsa_dict, 1, 1, "heatmap_sarsa")
