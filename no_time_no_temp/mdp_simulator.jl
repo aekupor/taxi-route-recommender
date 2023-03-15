@@ -82,7 +82,7 @@ end
 function check_in_hot_spot(x::Int64, y::Int64, hot_spots::Vector{Vector{Int64}})
     min_dist = minimum(distance(x, y, point[1], point[2]) for point in hot_spots)
     random_num =  rand()
-    if random_num <= 1/ (min_dist + 1)
+    if random_num <= 1/ (min_dist + 4/3)
         return true
     end 
     return false
@@ -109,7 +109,7 @@ function POMDPs.transition(mdp::taxi_world, state::taxi_world_state, action::Sym
     #    hot_spots = [[2,4], [2, 9], [3, 4], [1, 10],	[8, 5], [9, 6],	[10, 3], [8, 9]]
     #end
     curr_dist_from_hs = minimum(distance(x, y, point[1], point[2]) for point in hot_spots)
-    stuck_prob = 0
+    #stuck_prob = 0
    #if time == 3 || time == 4
    #     stuck_prob = 1.0 / (curr_dist_from_hs + 1)
     #else 
@@ -199,10 +199,10 @@ end;
 
 # TODO: COMMENT ME OUT!!!!!!!!!
 
- mdp = taxi_world() # create the taxi world MDP
- policy = RandomPolicy(mdp)
- data = Vector()
- push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
+#  mdp = taxi_world() # create the taxi world MDP
+#  policy = RandomPolicy(mdp)
+#  data = Vector()
+#  push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
 
 # for i in 1:50
 #     println(i)
