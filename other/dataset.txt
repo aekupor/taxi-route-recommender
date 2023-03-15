@@ -1,0 +1,15 @@
+x	y	temp	time	received_request	a	r	sp_x	sp_y	sp_temp	sp_time	sp_received_request
+1	1	1	1	false	3	0	1	1	1	1	false
+1	1	1	1	false	4	45.0	2	1	1	1	true
+1	1	1	2	false	5	0	1	1	1	2	false
+1	1	1	2	false	4	0	1	1	1	2	false
+1	1	1	2	false	2	0	1	1	1	2	false
+1	1	1	2	false	5	45.0	1	1	1	2	true
+1	1	1	3	false	5	0	1	1	1	3	false
+1	1	1	3	false	2	0	1	1	1	3	false
+1	1	1	3	false	2	0	1	1	1	3	false
+1	1	1	3	false	2	0	1	1	1	3	false
+1	1	1	3	false	2	0	1	1	1	3	false
+1	1	1	3	false	5	0	1	1	1	3	false
+1	1	1	3	false	2	0	1	1	1	3	false
+1	1	1	3	false	5	45.0	1	1	1	3	true

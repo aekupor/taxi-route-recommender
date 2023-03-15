@@ -5,7 +5,7 @@ using DataFrames
 df = DataFrame()
 
 # loop over each file and append its contents to the DataFrame
-for i in 1:16
+for i in 1:4
     filename = "test_dataset_ashlee_$i.txt"
     temp_df = CSV.read(filename, header=true, delim='\t', DataFrame)
     global df = vcat(df, temp_df)

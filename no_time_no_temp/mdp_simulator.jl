@@ -14,8 +14,8 @@ using POMDPPolicies
 # POMDPSimulators provide functions for running MDP simulations
 using POMDPSimulators
 
-size_x = 100
-size_y = 100
+size_x = 10
+size_y = 10
 
 struct taxi_world_state
     x::Int64 # x position
@@ -52,8 +52,8 @@ end
 function POMDPs.states(mdp::taxi_world)
     s = taxi_world_state[] # initialize an array of GridWorldStates
     # loop over all our states
-    temps = [1,2,3,4] # corresponds to 45, 60, 75, 90 degree F
-    times = [1,2,3,4] # corresponds to 0, 6, 12, 18 (military time)
+    temps = [1] # corresponds to 45, 60, 75, 90 degree F
+    times = [1] # corresponds to 0, 6, 12, 18 (military time)
     for d = 0:1, y = 1:mdp.size_y, x = 1:mdp.size_x, time in times, temp in temps
         push!(s, taxi_world_state(x, y, temp, time, d))
     end
@@ -103,18 +103,18 @@ function POMDPs.transition(mdp::taxi_world, state::taxi_world_state, action::Sym
     end
     hot_spots = []
     # determine hot spots based on weather 
-    if temp == 3 || temp == 4 # warm  
-        hot_spots = [[20,50], [40, 20], [50, 50], [70, 60],	[80, 70], [40, 90],	[80, 90], [90, 80]]
-    else # cold
-        hot_spots = [[100, 40], [20, 45], [30, 55], [40, 90], [60, 60], [80, 75], [90, 65], [70, 95]]
-    end
+    #if temp == 3 || temp == 4 # warm  
+        hot_spots = [[1,7], [2, 5], [7, 3], [9, 2],	[8, 10], [5, 5],	[4, 3], [6, 9]]
+   #else # cold
+    #    hot_spots = [[2,4], [2, 9], [3, 4], [1, 10],	[8, 5], [9, 6],	[10, 3], [8, 9]]
+    #end
     curr_dist_from_hs = minimum(distance(x, y, point[1], point[2]) for point in hot_spots)
     stuck_prob = 0
-    if time == 3 || time == 4
-        stuck_prob = 1.0 / (curr_dist_from_hs + 1)
-    else 
+   #if time == 3 || time == 4
+   #     stuck_prob = 1.0 / (curr_dist_from_hs + 1)
+    #else 
         stuck_prob = 1.0 / (2 * (curr_dist_from_hs + 1))
-    end
+   # end
     
 
     neighbors = [
@@ -204,19 +204,17 @@ end;
  data = Vector()
  push!(data, ("x", "y", "temp", "time", "received_request", "a", "r", "sp_x", "sp_y", "sp_temp", "sp_time", "sp_received_request")) # titles
 
-for i in 1:10
-     for x in 1:100
-         for y in 1:100
-             for time in 1:4
-                 for temp in 1:4
-                     POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, time, temp, false))
-                     for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
-                         push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))
-                         writedlm("train_dataset_new.txt", data)
-                     end
-                 end
-             end
-         end
-     end
- end
- writedlm("train_dataset_new.txt", data)
+# for i in 1:50
+#     println(i)
+#     for x in 1:10
+#         for y in 1:10
+#             time = 1
+#             temp = 1
+#             POMDPs.initialstate(mdp::taxi_world) = Deterministic(taxi_world_state(x, y, temp, time, false))
+#             for (s,a,r, sp) in stepthrough(mdp, policy, "s,a,r,sp", max_steps=100)
+#                 push!(data, (s.x, s.y, s.temp, s.time, s.received_request, get_action_index(a), r, sp.x, sp.y, sp.temp, sp.time, sp.received_request))                
+#             end
+#         end
+#     end
+# end
+# writedlm("train_dataset.txt", data)
