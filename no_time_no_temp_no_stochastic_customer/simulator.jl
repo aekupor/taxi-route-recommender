@@ -114,11 +114,11 @@ function POMDPs.transition(mdp::taxi_world, state::taxi_world_state, action::Sym
     #    hot_spots = [[2,4], [2, 9], [3, 4], [1, 10],	[8, 5], [9, 6],	[10, 3], [8, 9]]
     #end
     curr_dist_from_hs = minimum(distance(x, y, point[1], point[2]) for point in hot_spots)
-    stuck_prob = 0
+   # stuck_prob = 0
    #if time == 3 || time == 4
-   #     stuck_prob = 1.0 / (curr_dist_from_hs + 1)
+        stuck_prob = 1.0 / (curr_dist_from_hs + 4/3)
     #else 
-        stuck_prob = 1.0 / (2 * (curr_dist_from_hs + 1))
+       # stuck_prob = 1.0 / (2 * (curr_dist_from_hs + 1))
    # end
     
 
@@ -224,4 +224,4 @@ end;
 #     end
 #  end
 # end
-#  writedlm("train_dataset_new_small_notimetemp.txt", data)
+#  writedlm("train_dataset.txt", data)
